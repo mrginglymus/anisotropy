@@ -20,25 +20,41 @@ if numvarargs == 0
     [ name, path ] = uiputfile( '.tif',...
         'Please select output file', '/Volumes/WAC26' );
     outFile = strcat( path, name );
-elseif numvarargs == 2
+elseif numvarargs == 3
     alignFile = varargin{ 1 };
     imFile = varargin{ 2 };
+    outFile = varargin{ 3 };
 else
     error( 'optosplit takes two input arguments - file locations for the alignment file and the image file' );
 end
 
 alignment = csvread( alignFile );
 
-r1 = alignment(1,:)
-r2 = alignment(2,:)
+r1 = alignment(1,:);
+r2 = alignment(2,:);
+
+if isequal( exist( outFile ), 2 )
+    delete( outFile )
+end
+
 
 timeSteps = length( imfinfo( imFile ) );
+h = waitbar(0,'Splitting Images');
+for t = 1:timeSteps
+    im = imread( imFile, t );
+    i1 = imcrop( im, r1 );
+    i2 = imcrop( im, r2 );
+    imwrite( i1, outFile, 'WriteMode', 'Append' );
+    imwrite( i2, outFile, 'WriteMode', 'Append' );
+    waitbar( t/timeSteps, h )
+end
+close(h)
 
-t = 1;
-
-im = imread( imFile, t );
-ic = imcrop(im, r1);
-imshow( ic, [min(ic(:)), max(ic(:))] );
+tiffFile = Tiff( outFile, 'r+' );
+tiffFile.setTag( 'ImageDescription', sprintf('ImageJ=1.46k\nimages=%i\nslices=2\nframes=%i\nhyperstack=true\nloop=false', timeSteps*2, timeSteps) )
+tiffFile.rewriteDirectory();
+tiffFile.close();
+    
 
 
 end
