@@ -17,17 +17,18 @@ if numvarargs == 0
     [ name, path ] = uigetfile( '.tif',...
         'Please select the image for alignment' );
     alignFile = strcat( path, name );
-elseif
-    numvarargs == 1
+    [ name, path ] = uiputfile( '.mat',...
+        'Please select output file' );
+    outFile = strcat( path, name );
+elseif numvarargs == 1
     % file was provided
     alignFile = varargin{ 1 };
 else
     error( 'alignment takes one input argument - file location of the alignment file' );
 end
 %}
-alignFile = ('/Volumes/WAC26/2012 04 26/calibrate.tif');
-close all;
 
+alignFile = '/Volumes/WAC26/2012 04 26/2-1.tif';
 % open alignment image
 aim = imread( alignFile );
 stats = regionprops( im2bw( aim, graythresh( aim ) ), 'Extrema', 'BoundingBox' );
@@ -35,10 +36,45 @@ stats = regionprops( im2bw( aim, graythresh( aim ) ), 'Extrema', 'BoundingBox' )
 r1 = getrect( stats(1).Extrema );
 r2 = getrect( stats(2).Extrema );
 
-for i=1:20
+[ r1, r2 ] = matchrect( r1, r2, 0.9 );
+
+
+
+for i=1:50
 r1 = optx( aim, r1, r2 );
 r1 = opty( aim, r1, r2 );
 end
+
+%{
+if outFile
+    save( outFile, 'r1', 'r2' );
+end
+%}
+im1 = r1.cutim( aim );
+im2 = r2.cutim( aim );
+
+im(:,:,1) = im1;
+im(:,:,2) = im2;
+im(:,:,3) = zeros(size(im1));
+
+figure(1)
+imshow(im);
+
+im1m = mean(im1(:));
+im2m = mean(im2(:));
+
+im1mv = mean(im1,1) - im1m;
+im2mv = mean(im2,1) - im2m;
+
+im1mh = mean(im1,2) - im1m;
+im2mh = mean(im2,2) - im2m;
+
+figure(2);
+subplot(2,1,1);
+plot( [im1mv; im2mv]' )
+
+subplot(2,1,2);
+plot( [im1mh, im2mh] )
 
 
 end
@@ -49,9 +85,9 @@ function [ r1 ] = optx( aim, r1, r2 )
 r1u = r1.shiftx(1);
 r1d = r1.shiftx(-1);
 
-[ exu, ~ ] = er( aim, r1u, r2 );
-[ ex, ~ ] = er( aim, r1, r2 );
-[ exd, ~ ] = er( aim, r1d, r2 );
+exu = erx( aim, r1u, r2 );
+ex  = erx( aim, r1, r2 );
+exd = erx( aim, r1d, r2 );
 
 if exu < ex || exd < ex
     if exu < exd
@@ -67,9 +103,9 @@ function [ r1 ] = opty( aim, r1, r2 )
 r1r = r1.shifty(1);
 r1l = r1.shifty(-1);
 
-[ ~, eyr ] = er( aim, r1r, r2 );
-[ ~, ey ] = er( aim, r1, r2 );
-[ ~, eyl ] = er( aim, r1l, r2 );
+eyr = ery( aim, r1r, r2 );
+ey  = ery( aim, r1, r2 );
+eyl = ery( aim, r1l, r2 );
 
 if eyr < ey || eyl < ey
     if eyr < eyl
@@ -82,25 +118,44 @@ end
 end
 
 
-function [ ex, ey ] = er( aim, r1, r2 )
-im1 = r1.cutim( aim );
-im2 = r2.cutim( aim );
+function erx = erx( aim, r1, r2 )
+im1mv = double( mean( r1.cutim( aim ), 1 ) );
+im2mv = double( mean( r2.cutim( aim ), 1 ) );
 
-im1m = mean( im1(:) );
-im1mv = mean( im1, 1 ) - im1m;
-im1mh = mean( im1, 2 ) - im1m;
+D = [ ones( 1, length( im1mv ) ); 1:length( im1mv ) ];
 
-im2m = mean( im2(:) );
-im2mv = mean( im2, 1 ) - im2m;
-im2mh = mean( im2, 2 ) - im2m;
+im1slope = im1mv/D;
+im2slope = im2mv/D;
 
-ex = im1mv - im2mv;
-ex = sqrt(ex*ex'/length(ex));
+im1mv = im1mv - im1slope*D;
+im2mv = im2mv - im2slope*D;
 
-ey = im1mh - im2mh;
-ey = sqrt(ey'*ey/length(ey));
+
+erx = im1mv - im2mv;
+erx = sqrt(erx*erx'/length(erx));
 
 end
+
+function ery = ery( aim, r1, r2 )
+im1mh = double( mean( r1.cutim( aim ), 2 ) )';
+im2mh = double( mean( r2.cutim( aim ), 2 ) )';
+
+D = [ ones( 1, length( im1mh ) ); 1:length( im1mh ) ];
+
+im1slope = im1mh/D;
+im2slope = im2mh/D;
+
+im1mh = im1mh - im1slope*D;
+im2mh = im2mh - im2slope*D;
+
+
+ery = im1mh - im2mh;
+ery = sqrt(ery*ery'/length(ery));
+
+
+end
+
+
 
 
 function [ r ] = getrect( stats )

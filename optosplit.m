@@ -35,19 +35,35 @@ else
     error( 'optosplit takes three input arguments - file locations for the alignment file, the image file, and output location' );
 end
 
-% read in the java object containing the alignment box
+% get alignment
 
-% open alignment file
-fin = java.io.FileInputStream( alignFile );
-% prepare object streamer
-ois = java.io.ObjectInputStream( fin );
-% read off first rectangle
-r1 = ois.readObject()
-% and second rectangle
-r2 = ois.readObject()
+[ ~, ~, ext ] = fileparts( alignFile );
 
-% close the streamers
-clear( 'fin', 'ois' );
+if strcmp( ext, '.ali' )
+    % read in the java object containing the alignment box
+
+    % open alignment file
+    fin = java.io.FileInputStream( alignFile );
+    % prepare object streamer
+    ois = java.io.ObjectInputStream( fin );
+    % read off first rectangle
+    r1 = jr2mr( ois.readObject() )
+    % and second rectangle
+    r2 = jr2mr( ois.readObject() )
+
+    % close the streamers
+    clear( 'fin', 'ois' );
+    
+elseif strcmp( ext, '.tif' )
+    % run the .tif file through alignment.m
+    
+    [ r1, r2 ] = alignment( alignFile );
+    
+elseif strcmp( ext, '.mat' )
+    % read in the rectangles from the pre-generated mat file
+    
+    load( alignFile );
+end
 
 % delete the file if it currently exists
 if isequal( exist( imout, 'file' ), 2 )
@@ -97,6 +113,12 @@ function [ imout ] = imcrop( im, r )
 % crops an image given a java rectangle class OR a matlab struct containing
 % x, y, width and height
 
-imout = im(r.y:r.y+r.height, r.x:r.x+r.width);
+imout = im(r.y1:r.y2, r.x1:r.x2);
+
+end
+
+function [ r ] = jr2mr( r )
+
+r = MyRect( r.x, r.x+r.width, r.y, r.y+r.height );
 
 end
