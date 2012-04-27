@@ -59,5 +59,16 @@ classdef MyRect
             obj.y2 = obj.y2 + d;
         end
         
+        function obj = shift( obj, d, v )
+            if strcmp( d, 'x' )
+                obj.x1 = obj.x1 - v;
+                obj.x2 = obj.x2 - v;
+            elseif strcmp( d, 'y' )
+                obj.y1 = obj.y1 + v;
+                obj.y2 = obj.y2 + v;
+            end
+        end
+                
+        
     end
 end
