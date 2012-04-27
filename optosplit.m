@@ -12,16 +12,19 @@ numvarargs = length( varargin );
 if numvarargs == 0
     % prompt for user file selection
     % select alignment file from ImageJ
-    [ name, path ] = uigetfile( '.ali',...
-        'Please select the alignment file', '/Volumes/WAC26' );
+    [ name, path ] = uigetfile( {
+        '*.mat','.mat alignment';...
+        '*.tif','.tif alignment';...
+        '*.ali','.ali alignment' },...
+        'Please select the alignment file' );
     alignFile = strcat( path, name );
     % select image file
     [ name, path ] = uigetfile( '.tif',...
-        'Please select the image file', '/Volumes/WAC26' );
+        'Please select the image file' );
     imFile = strcat( path, name );
     % select output file
     [ name, path ] = uiputfile( '.tif',...
-        'Please select output file', '/Volumes/WAC26' );
+        'Please select output file' );
     imout = strcat( path, name );
 elseif numvarargs == 3
     % files were provided
@@ -39,9 +42,9 @@ fin = java.io.FileInputStream( alignFile );
 % prepare object streamer
 ois = java.io.ObjectInputStream( fin );
 % read off first rectangle
-r1 = ois.readObject();
+r1 = ois.readObject()
 % and second rectangle
-r2 = ois.readObject();
+r2 = ois.readObject()
 
 % close the streamers
 clear( 'fin', 'ois' );
